@@ -6,6 +6,9 @@ require('dotenv').config();
 
 const app = express();
 
+// Trust Render's reverse proxy (required for rate limiting to work correctly)
+app.set('trust proxy', 1);
+
 // Security headers (without helmet to keep inline scripts working)
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');

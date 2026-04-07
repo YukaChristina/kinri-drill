@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>金利ドリル</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue: #1a56db; --blue-dark: #1648c0; --navy: #0d2847;
+    --text: #1a2a3a; --muted: #64748b; --border: #d0d8e4;
+    --bg: #f0f4f8; --white: #fff;
+    --green: #22c55e; --yellow: #eab308; --red: #ef4444;
+    --radius: 12px; --shadow: 0 2px 10px rgba(0,0,0,0.08);
+  }
+  body { font-family: 'Hiragino Kaku Gothic ProN','Meiryo',sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; -webkit-text-size-adjust: 100%; }
+  .screen { display: none; min-height: 100vh; flex-direction: column; }
+  .screen.active { display: flex; }
+
+  /* HEADER */
+  .app-header { background: var(--navy); color: var(--white); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+  .app-header h1 { font-size: clamp(15px,4vw,18px); font-weight: 700; }
+  .header-right { font-size: 13px; color: #93c5fd; }
+
+  /* CONTENT */
+  .content { flex: 1; padding: 20px 16px 40px; max-width: 680px; margin: 0 auto; width: 100%; }
+
+  /* BUTTONS */
+  .btn { display: inline-flex; align-items: center; justify-content: center; padding: 14px 24px; border-radius: var(--radius); font-size: clamp(14px,3.5vw,16px); font-weight: 700; cursor: pointer; border: none; transition: transform 0.1s, opacity 0.15s; -webkit-tap-highlight-color: transparent; }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background: var(--blue); color: var(--white); box-shadow: 0 4px 12px rgba(26,86,219,0.25); }
+  .btn-primary:not(:disabled):hover { background: var(--blue-dark); }
+  .btn-skip { background: var(--white); color: var(--muted); border: 2px solid var(--border); }
+  .btn-skip:hover { background: #f5f8fc; }
+  .btn-full { display: flex; width: 100%; }
+
+  /* ACTION ROW */
+  .action-row { display: flex; gap: 10px; }
+  .action-row .btn-primary { flex: 2; }
+  .action-row .btn-skip { flex: 1; }
+  @media(max-width:360px){
+    .action-row { flex-direction: column; }
+    .action-row .btn-primary, .action-row .btn-skip { flex: none; width: 100%; }
+  }
+
+  /* START */
+  .hero { background: linear-gradient(135deg,var(--navy) 0%,#1a4a8a 100%); color: var(--white); border-radius: 16px; padding: clamp(24px,5vw,40px) clamp(20px,5vw,28px); margin-bottom: 20px; text-align: center; }
+  .hero h2 { font-size: clamp(22px,6vw,28px); margin-bottom: 8px; }
+  .hero p { opacity: 0.85; font-size: clamp(13px,3.5vw,15px); line-height: 1.6; }
+  .info-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 20px; }
+  @media(max-width:400px){ .info-grid { grid-template-columns: repeat(2,1fr); } }
+  .info-card { background: var(--white); border-radius: var(--radius); padding: 14px 8px; text-align: center; box-shadow: var(--shadow); }
+  .info-card .num { font-size: clamp(22px,6vw,28px); font-weight: 800; color: var(--blue); }
+  .info-card .label { font-size: clamp(10px,2.5vw,12px); color: var(--muted); margin-top: 3px; }
+  .category-list { background: var(--white); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); margin-bottom: 20px; }
+  .category-list h3 { font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--navy); }
+  .category-tag { display: inline-block; background: #eff6ff; color: var(--blue); font-size: 11px; padding: 4px 10px; border-radius: 20px; margin: 3px; }
+
+  /* QUESTION */
+  .progress-bar-bg { background: #dde6f0; border-radius: 99px; height: 6px; margin-bottom: 6px; }
+  .progress-bar { background: var(--blue); height: 6px; border-radius: 99px; transition: width 0.4s ease; }
+  .progress-text { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+  .question-card { background: var(--white); border-radius: 16px; padding: clamp(16px,4vw,24px); box-shadow: var(--shadow); margin-bottom: 14px; }
+  .q-category { display: inline-block; background: #eff6ff; color: var(--blue); font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 20px; margin-bottom: 12px; }
+  .q-text { font-size: clamp(15px,4vw,17px); font-weight: 600; line-height: 1.65; }
+  .choices { display: flex; flex-direction: column; gap: 9px; margin-top: 18px; }
+  .choice-label { display: flex; align-items: flex-start; gap: 10px; background: #f8fafc; border: 2px solid var(--border); border-radius: var(--radius); padding: clamp(12px,3vw,14px) clamp(12px,3vw,16px); cursor: pointer; transition: border-color 0.15s, background 0.15s; -webkit-tap-highlight-color: transparent; }
+  .choice-label:hover { border-color: #93c5fd; background: #eff6ff; }
+  .choice-label:has(input:checked) { border-color: var(--blue); background: #eff6ff; }
+  .choice-label input[type="radio"] { margin-top: 3px; accent-color: var(--blue); width: 18px; height: 18px; flex-shrink: 0; }
+  .choice-badge { font-size: 13px; font-weight: 700; color: #475569; flex-shrink: 0; min-width: 18px; }
+  .choice-text { font-size: clamp(13px,3.5vw,15px); line-height: 1.55; }
+  .reason-section { background: var(--white); border-radius: var(--radius); padding: clamp(14px,3vw,20px); box-shadow: var(--shadow); margin-bottom: 14px; }
+  .reason-section label { font-size: 14px; font-weight: 600; display: block; margin-bottom: 8px; }
+  .reason-section textarea { width: 100%; height: 88px; padding: 10px 12px; border: 2px solid var(--border); border-radius: 8px; font-size: clamp(13px,3.5vw,14px); resize: vertical; outline: none; font-family: inherit; line-height: 1.5; transition: border-color 0.2s; }
+  .reason-section textarea:focus { border-color: var(--blue); }
+  .hint { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+
+  /* FEEDBACK */
+  .feedback-card { border-radius: 16px; padding: clamp(16px,4vw,24px); margin-bottom: 14px; }
+  .feedback-card.perfect { background: #f0fdf4; border: 2px solid var(--green); }
+  .feedback-card.partial { background: #fefce8; border: 2px solid var(--yellow); }
+  .feedback-card.wrong   { background: #fef2f2; border: 2px solid var(--red); }
+  .feedback-badge { display: inline-flex; align-items: center; font-size: 15px; font-weight: 800; padding: 6px 14px; border-radius: 99px; margin-bottom: 10px; }
+  .perfect .feedback-badge { background: var(--green); color: var(--white); }
+  .partial .feedback-badge { background: var(--yellow); color: var(--white); }
+  .wrong   .feedback-badge { background: var(--red);   color: var(--white); }
+  .score-display { font-size: clamp(28px,8vw,36px); font-weight: 900; margin-bottom: 4px; }
+  .score-display span { font-size: 16px; font-weight: 500; }
+  .correct-answer { font-size: 14px; margin-bottom: 10px; line-height: 1.5; }
+  .correct-answer strong { color: #16a34a; }
+  .ai-loading { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); padding: 12px 0; }
+  .spinner { width: 20px; height: 20px; border: 3px solid #d0d8e4; border-top-color: var(--blue); border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .ai-comment-wrap { background: rgba(0,0,0,0.04); border-radius: 8px; padding: 12px; }
+  .ai-label { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+  .ai-comment { font-size: clamp(13px,3.5vw,14px); line-height: 1.65; }
+  .explanation-card { background: var(--white); border-radius: var(--radius); padding: clamp(14px,3vw,20px); box-shadow: var(--shadow); margin-bottom: 14px; }
+  .explanation-card h4 { font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+  .explanation-card p { font-size: clamp(13px,3.5vw,14px); line-height: 1.7; color: #334155; }
+
+  /* RESULT */
+  .result-hero { background: linear-gradient(135deg,var(--navy),#1a4a8a); color: var(--white); border-radius: 16px; padding: clamp(24px,5vw,32px) 20px; text-align: center; margin-bottom: 16px; }
+  .result-hero .total-score { font-size: clamp(52px,14vw,64px); font-weight: 900; line-height: 1; }
+  .result-hero .score-label { font-size: 16px; opacity: 0.8; margin-top: 4px; }
+  .result-hero .grade { font-size: clamp(16px,4.5vw,20px); font-weight: 700; margin-top: 12px; }
+  .result-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 16px; }
+  @media(max-width:360px){ .result-grid { grid-template-columns: repeat(2,1fr); } }
+  .result-stat { background: var(--white); border-radius: var(--radius); padding: clamp(10px,3vw,14px); text-align: center; box-shadow: var(--shadow); }
+  .result-stat .val { font-size: clamp(18px,5vw,22px); font-weight: 800; }
+  .result-stat .val.green { color: #16a34a; }
+  .result-stat .val.yellow { color: #ca8a04; }
+  .result-stat .val.red { color: #dc2626; }
+  .result-stat .val.gray { color: var(--muted); }
+  .result-stat .lbl { font-size: clamp(10px,2.5vw,11px); color: var(--muted); margin-top: 2px; }
+  .question-results { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+  .qr-item { background: var(--white); border-radius: var(--radius); padding: 12px 14px; box-shadow: 0 1px 6px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 10px; }
+  .qr-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .qr-dot.p2 { background: var(--green); }
+  .qr-dot.p1 { background: var(--yellow); }
+  .qr-dot.p0 { background: var(--red); }
+  .qr-dot.skip { background: #cbd5e1; }
+  .qr-text { flex: 1; font-size: clamp(12px,3vw,13px); line-height: 1.5; min-width: 0; }
+  .qr-score { font-size: clamp(14px,4vw,16px); font-weight: 800; flex-shrink: 0; }
+  .share-row { display: flex; gap: 10px; margin-bottom: 16px; }
+  .btn-share { flex: 1; padding: 13px; border-radius: var(--radius); font-size: clamp(13px,3.5vw,14px); font-weight: 700; cursor: pointer; border: none; -webkit-tap-highlight-color: transparent; }
+  .btn-twitter { background: #000; color: var(--white); }
+  .btn-copy { background: #64748b; color: var(--white); }
+</style>
+</head>
+<body>
+
+<!-- START -->
+<div id="screen-start" class="screen active">
+  <div class="app-header"><h1>💹 金利ドリル</h1></div>
+  <div class="content">
+    <div class="hero">
+      <h2>金利ドリル</h2>
+      <p>金利の変動が経済・市場・資産に<br>どう影響するかを学ぼう</p>
+    </div>
+    <div class="info-grid">
+      <div class="info-card"><div class="num">100</div><div class="label">総問題数</div></div>
+      <div class="info-card"><div class="num">10</div><div class="label">1セッション</div></div>
+      <div class="info-card"><div class="num">20</div><div class="label">満点スコア</div></div>
+      <div class="info-card"><div class="num">2</div><div class="label">カテゴリ</div></div>
+    </div>
+    <div class="category-list">
+      <h3>米国金利（50問）</h3>
+      <span class="category-tag">株式市場</span><span class="category-tag">債券市場</span><span class="category-tag">為替・ドル</span><span class="category-tag">不動産市場</span><span class="category-tag">企業財務</span><span class="category-tag">消費・景気</span><span class="category-tag">新興国・商品</span><span class="category-tag">金融機関</span>
+      <br><br>
+      <h3>日本金利（50問）</h3>
+      <span class="category-tag">株式市場</span><span class="category-tag">債券市場</span><span class="category-tag">為替・円</span><span class="category-tag">不動産市場</span><span class="category-tag">企業財務</span><span class="category-tag">消費・景気</span><span class="category-tag">金融機関</span><span class="category-tag">マクロ経済</span>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="startSession()">セッション開始（10問）</button>
+  </div>
+</div>
+
+<!-- QUESTION -->
+<div id="screen-question" class="screen">
+  <div class="app-header">
+    <h1>💹 金利ドリル</h1>
+    <div class="header-right" id="q-counter"></div>
+  </div>
+  <div class="content">
+    <div class="progress-bar-bg"><div class="progress-bar" id="progress-bar"></div></div>
+    <p class="progress-text" id="progress-text"></p>
+    <div class="question-card">
+      <span class="q-category" id="q-category"></span>
+      <p class="q-text" id="q-text"></p>
+      <div class="choices" id="choices-container"></div>
+    </div>
+    <div class="reason-section">
+      <label>理由記述（AIが採点）</label>
+      <textarea id="reason-input" placeholder="なぜその選択肢を選んだか、経済的な因果関係を記述してください..."></textarea>
+      <p class="hint">記入なしの場合、理由点は0点になります</p>
+    </div>
+    <div class="action-row">
+      <button class="btn btn-primary" id="btn-submit" onclick="submitAnswer()">回答する</button>
+      <button class="btn btn-skip" onclick="skipQuestion()">スキップ</button>
+    </div>
+  </div>
+</div>
+
+<!-- FEEDBACK -->
+<div id="screen-feedback" class="screen">
+  <div class="app-header">
+    <h1>💹 金利ドリル</h1>
+    <div class="header-right" id="fb-counter"></div>
+  </div>
+  <div class="content">
+    <div id="feedback-card" class="feedback-card">
+      <div id="feedback-badge" class="feedback-badge"></div>
+      <div class="score-display" id="feedback-score"></div>
+      <div class="correct-answer" id="feedback-correct"></div>
+      <div id="ai-loading" class="ai-loading" style="display:none;"><div class="spinner"></div>AIが理由を採点中...</div>
+      <div id="ai-result" style="display:none;">
+        <div class="ai-comment-wrap"><p class="ai-label">AIコメント</p><p class="ai-comment" id="ai-comment-text"></p></div>
+      </div>
+    </div>
+    <div class="explanation-card"><h4>解説</h4><p id="explanation-text"></p></div>
+    <button class="btn btn-primary btn-full" id="btn-next" onclick="nextQuestion()">次の問題へ</button>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div id="screen-result" class="screen">
+  <div class="app-header"><h1>💹 金利ドリル</h1></div>
+  <div class="content">
+    <div class="result-hero">
+      <div class="total-score" id="result-total">0</div>
+      <div class="score-label">/ 20点</div>
+      <div class="grade" id="result-grade"></div>
+    </div>
+    <div class="result-grid" id="result-grid">
+      <div class="result-stat"><div class="val green" id="result-p2">0</div><div class="lbl">完璧（2点）</div></div>
+      <div class="result-stat"><div class="val yellow" id="result-p1">0</div><div class="lbl">部分正解（1点）</div></div>
+      <div class="result-stat"><div class="val red" id="result-p0">0</div><div class="lbl">不正解（0点）</div></div>
+    </div>
+    <div class="question-results" id="question-results"></div>
+    <div class="share-row">
+      <button class="btn-share btn-twitter" onclick="shareTwitter()">𝕏 シェア</button>
+      <button class="btn-share btn-copy" onclick="copyResult()">📋 コピー</button>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="showScreen('screen-start')" style="margin-bottom:10px;">もう一度チャレンジ</button>
+  </div>
+</div>
+
+<script>
+const ALL_QUESTIONS = [
+  {id:1,category:"株式市場（米）",q:"米国の政策金利が大幅に引き上げられた場合、ハイテク・成長株（グロース株）の株価はどうなる可能性が高いですか？",choices:["A. 株価は変動しない（金利と株は無関係）","B. 配当株のみ上昇する","C. 株価は上昇する（金利高＝景気良好の証拠）","D. 株価は下落する（割引率の上昇で将来利益の現在価値が低下）"],correct:"D",explanation:"金利が上がると将来キャッシュフローの割引率が上昇し、遠い将来に利益が期待される成長株ほど現在価値が大きく下がります。また債券利回りの上昇で株式の相対的魅力も低下します。"},
+  {id:2,category:"株式市場（米）",q:"金利上昇局面で、グロース株と比較してバリュー株（割安株）のパフォーマンスはどうなる傾向がありますか？",choices:["A. バリュー株は相対的にアウトパフォームする傾向がある","B. バリュー株も同様に大きく下落する","C. 両者に差はない","D. バリュー株は常に下落する"],correct:"A",explanation:"バリュー株は現時点で利益を上げている企業が多く、割引率上昇の影響を受けにくいです。金利上昇局面では銀行・エネルギーなどのバリューセクターが相対的に強くなる傾向があります。"},
+  {id:3,category:"株式市場（米）",q:"FRBが「景気過熱の抑制」を目的に利上げを行った場合、株式市場全体への短期的な影響はどれですか？",choices:["A. 影響はほとんどない","B. 小型株のみ上昇する","C. 利上げ自体がネガティブ材料となり株価は下落しやすい","D. 景気が良い証拠なので株価は上昇する"],correct:"C",explanation:"景気の強さはポジティブですが、利上げによる資金調達コスト上昇・割引率上昇・消費抑制への懸念が先行しやすく、短期的には株価下落圧力になります。"},
+  {id:4,category:"株式市場（米）",q:"金利上昇時に、銀行・金融セクターの株価への影響はどうなりますか？",choices:["A. 常に大幅下落する","B. 影響を受けない","C. 外国銀行株のみ上昇する","D. 純利ざや拡大期待から上昇しやすい"],correct:"D",explanation:"銀行は短期調達・長期貸出のモデルで、金利上昇初期は貸出金利の上昇が先行して純利ざやが拡大しやすく、株価がアウトパフォームする傾向があります。"},
+  {id:5,category:"株式市場（米）",q:"長期にわたる急速な利上げサイクルの後、株式市場全体が最も恐れる経済シナリオはどれですか？",choices:["A. 景気後退（リセッション）への突入","B. インフレの再燃","C. ドル高の継続","D. 原油価格の上昇"],correct:"A",explanation:"急激な利上げは需要を冷やしすぎてリセッションを引き起こすリスクがあります。企業収益の悪化・失業率上昇が株価の大幅下落につながるため、市場はこのシナリオを最も警戒します。"},
+  {id:6,category:"株式市場（米）",q:"金利上昇時に、PER（株価収益率）の水準はどう変化する傾向がありますか？",choices:["A. PERは低下する（将来利益の現在価値低下でバリュエーションが切り下がる）","B. 高PER銘柄のみPERが上昇する","C. PERは上昇する","D. PERは変化しない"],correct:"A",explanation:"金利上昇時は将来利益の現在価値が低下し、投資家は低いPERでしか株を買わなくなります。バリュエーションの水準自体が切り下がる現象をマルチプル・コントラクションと呼びます。"},
+  {id:7,category:"株式市場（米）",q:"金利がピークアウト（利下げ転換の観測が高まる）した場合、株式市場はどう反応する傾向がありますか？",choices:["A. コモディティ株のみ上昇する","B. 株価は上昇しやすい（特に成長株が恩恵を受ける）","C. 株価は下落を続ける","D. 株価への影響はない"],correct:"B",explanation:"金利ピークアウトは割引率低下・企業の資金調達コスト低下を意味するため、株式市場にとってポジティブです。特に金利感応度の高い成長株・不動産株が上昇しやすくなります。"},
+  {id:8,category:"株式市場（米）",q:"REIT（不動産投資信託）の株価は金利上昇時にどのように反応しますか？",choices:["A. 金利とREITは無関係","B. 国内REITのみ影響を受ける","C. 金利上昇時にREITは上昇する","D. 金利上昇時にREITは下落しやすい（借入コスト増・債券に対する魅力低下）"],correct:"D",explanation:"REITは多額の借入で不動産を保有・運営します。金利上昇は①調達コスト増加②分配利回りが債券に対して相対的に低下③不動産価格の下落圧力、でREIT価格が下落しやすくなります。"},
+  {id:9,category:"株式市場（米）",q:"米国金利の上昇が日本株市場に与える直接的な影響として最も可能性が高いのはどれですか？",choices:["A. 内需株のみ上昇する","B. 日本株は全く影響を受けない","C. 円安進行により輸出企業の業績改善期待から日本株が上昇する場合がある","D. 日本株は常に連動して下落する"],correct:"C",explanation:"米国金利上昇→ドル高・円安が進むと、トヨタ・ソニーなどの輸出大企業は円換算の収益が増加します。円安は日本株（特に輸出株）にとってポジティブに働く場合があります。"},
+  {id:10,category:"株式市場（米）",q:"金利上昇局面で、配当利回りの高いディフェンシブ株（公益・通信など）の株価への影響はどうなりますか？",choices:["A. 影響を受けない","B. 通信株のみ上昇する","C. 金利が上がっても配当が高いので株価は上昇する","D. 債券利回りが高まることで相対的魅力が低下し株価が下落しやすい"],correct:"D",explanation:"ディフェンシブ株は「債券の代替」として保有される側面があります。金利上昇で債券利回りが高まると、安定収入を求める資金が株式から債券へ移動し、ディフェンシブ株が売られやすくなります。"},
+  {id:11,category:"債券市場（米）",q:"米国金利が上昇した場合、既存の米国債（固定利付債）の価格はどうなりますか？",choices:["A. 短期債のみ下落する","B. 債券価格は下落する（新発高利回り債との競合で既存債の魅力が低下）","C. 債券価格は上昇する","D. 債券価格は変わらない"],correct:"B",explanation:"債券価格と金利は逆相関です。新発債は高利回りを提供するため、低利率の既存債は魅力が下がり価格が下落します。これを金利リスク（デュレーションリスク）と呼びます。"},
+  {id:12,category:"債券市場（米）",q:"デュレーション（残存年数）が長い債券と短い債券では、金利上昇時にどちらが価格下落が大きいですか？",choices:["A. 短期債の方が下落幅が大きい","B. どちらも同じ下落幅","C. 長期債の方が下落幅が大きい（金利感応度が高いため）","D. 金利の変動とデュレーションは無関係"],correct:"C",explanation:"デュレーションが長いほど金利感応度が高く、同じ金利上昇幅でも価格の下落幅が大きくなります。30年債は2年債よりもはるかに大きな価格変動を示します。"},
+  {id:13,category:"債券市場（米）",q:"金利が上昇した場合、ジャンク債（ハイイールド債）と投資適格債ではどちらのリスクが高まりますか？",choices:["A. 両者のリスクは同程度","B. どちらもリスクは低下する","C. 投資適格債のリスクが大幅に高まる","D. ジャンク債のリスクがより大幅に高まる（財務脆弱企業のデフォルトリスク増加）"],correct:"D",explanation:"金利上昇は財務基盤の弱い発行企業の資金繰りを直撃します。ジャンク債はもともと信用力が低く、借入コスト上昇でデフォルトリスクが急増します。"},
+  {id:14,category:"債券市場（米）",q:"米国の利上げ時に、日米金利差の変化と資金フローはどうなりますか？",choices:["A. 米国債の利回りが上昇し日米金利差が拡大、米国債への資金流入が増える","B. 日本国債への資金流入が増える","C. 両者の利回り差は変わらない","D. 日本の株式市場に資金が流入する"],correct:"A",explanation:"米国が利上げすると米国債利回りが上昇し、低金利の日本国債との差が拡大します。より高い利回りを求めてドル買い・円売り（円安）が進み、資金が米国に流入します。"},
+  {id:15,category:"債券市場（米）",q:"金利が上昇する局面で、新たに購入する投資家にとって債券投資の魅力はどう変わりますか？",choices:["A. 魅力は低下する","B. 外国債券のみ魅力が増す","C. 魅力は変わらない","D. 新規購入者には利回りが高くなるため魅力は増す（既存保有者と逆の立場）"],correct:"D",explanation:"金利上昇は既存保有者には価格下落の痛みですが、新たに購入する投資家には高い利回りで買えるチャンスです。十分に金利が上昇すれば、株式に対する債券の相対的な魅力が高まります。"},
+  {id:16,category:"債券市場（米）",q:"逆イールドカーブ（短期金利が長期金利を上回る）が発生した場合、一般的に何のシグナルと受け取られますか？",choices:["A. 景気拡大の加速","B. 将来の景気後退（リセッション）の予兆として受け取られる","C. インフレの終息","D. 株式市場の急騰"],correct:"B",explanation:"通常は長期金利の方が高いですが、FRBの急速な利上げで短期金利が急上昇し逆イールドが発生します。これは「市場が将来の景気悪化・利下げを織り込んでいる」サインとして知られています。"},
+  {id:17,category:"債券市場（米）",q:"社債の信用スプレッドは、金利上昇が景気悪化懸念を呼ぶ局面でどう変化しますか？",choices:["A. スプレッドは縮小する","B. 国債のスプレッドが縮小する","C. スプレッドは変わらない","D. スプレッドは拡大する（企業のデフォルトリスク上昇でリスクプレミアムが増大）"],correct:"D",explanation:"景気悪化懸念が高まると企業のデフォルトリスクが上昇し、国債に対する上乗せ利回り（信用スプレッド）が拡大します。これは社債価格の下落を意味し、特にジャンク債で顕著です。"},
+  {id:18,category:"債券市場（米）",q:"TIPS（インフレ連動国債）の需要は、実質金利が上昇する金利環境でどのように変化しますか？",choices:["A. TIPSの需要が急増する","B. 実質金利が上昇するとTIPSの相対的魅力は低下しやすい","C. 変化しない","D. 企業債券への需要が増加する"],correct:"B",explanation:"TIPSはインフレヘッジとして機能しますが、実質金利（名目金利－インフレ期待）が上昇すると、インフレ調整後のリターンが高まる通常の国債に対してTIPSの魅力が相対的に低下します。"},
+  {id:19,category:"為替・ドル",q:"米国が利上げを行い日本が低金利を維持した場合、ドル円レートはどう動く可能性が高いですか？",choices:["A. ユーロ高になる","B. 円高ドル安になる","C. レートは変動しない","D. 円安ドル高になる（日米金利差拡大でドルへの資金流入が増える）"],correct:"D",explanation:"金利差が広がると高利回りのドル資産を求めて円売りドル買いが進みます（キャリートレード）。日米金利差の拡大は円安ドル高の主要因の一つです。"},
+  {id:20,category:"為替・ドル",q:"ドル高が進んだ場合、ドル建てで原材料を輸入している日本企業の業績への影響はどうなりますか？",choices:["A. 影響はない","B. 輸入コスト上昇で業績が悪化する（円安で同額のドル支払いに必要な円が増加）","C. コスト減少で業績が改善する","D. 輸出額が増加する"],correct:"B",explanation:"ドル高・円安が進むと、石油・食料などドル建て原材料の円換算コストが上昇します。内需型・輸入依存型の企業（食品・小売・航空など）はコスト増で業績が悪化しやすいです。"},
+  {id:21,category:"為替・ドル",q:"米国が利上げを行った場合、ユーロ/ドルレートはどうなる傾向がありますか？",choices:["A. ドル高ユーロ安になる（ドルへの資金集中）","B. ユーロ高ドル安になる","C. ポンドが上昇する","D. 変動しない"],correct:"A",explanation:"米国の金利上昇はドルへの資金流入を促し、ドルが相対的に強くなります。ECBが同様に利上げしない場合は特にドル高ユーロ安が進みやすくなります。"},
+  {id:22,category:"為替・ドル",q:"急速なドル高が進んだ場合、ドル建て債務を多く抱える新興国にとっての影響はどうなりますか？",choices:["A. 輸出競争力が高まる","B. ドル建て債務の返済負担が軽減される","C. ドル建て債務の返済負担が自国通貨ベースで増大する（通貨危機リスク）","D. 影響はない"],correct:"C",explanation:"ドル高が進むと、自国通貨でドルを買う必要があるため同額のドル建て債務の返済に必要な自国通貨が増加します。外貨準備が乏しい新興国では通貨危機・デフォルトリスクが高まります。"},
+  {id:23,category:"為替・ドル",q:"急激な円安が進んだ場合、日本の貿易収支はどう変化しますか？",choices:["A. 必ず貿易黒字になる","B. 貿易収支は変化しない","C. 輸出数量増加は限定的で輸入額増大により貿易赤字が拡大する場合がある","D. 輸入が急減する"],correct:"C",explanation:"円安は価格競争力を高めますが、現代の製造業はすでに海外生産が多く輸出数量が大きく増えない一方、資源・食料などのドル建て輸入額は円換算で急増します。"},
+  {id:24,category:"為替・ドル",q:"FRBが利上げを停止し、利下げ転換が観測されてきた場合、ドルの動きはどうなりますか？",choices:["A. 変動しない","B. 金が下落する","C. ドル安の傾向になりやすい（ドルの利回り優位が低下）","D. ドルはさらに上昇を続ける"],correct:"C",explanation:"利下げ転換はドルの相対的な利回り優位の低下を意味します。これによりドル売り圧力が生まれ、新興国通貨や円などへの資金還流が起きやすくなります。"},
+  {id:25,category:"為替・ドル",q:"日本の政府・日銀が実施する「ドル売り・円買い介入」とはどのような行動ですか？",choices:["A. 円を売ってドルを買う","B. 国債を発行する","C. 金利を下げる","D. 保有する外貨準備（ドル）を売って円を買い、円安に歯止めをかける"],correct:"D",explanation:"急激な円安を抑えるため、日本の財務省（日銀が実施）は外貨準備として保有するドルを売り、円を買います。これにより円の需要が高まり、円安に歯止めをかけることが目的です。"},
+  {id:26,category:"不動産市場（米）",q:"米国の住宅ローン金利が7%を超えた場合、住宅市場への影響はどれですか？",choices:["A. 住宅需要が減少し価格下落圧力がかかる（月々の返済額増加で購入可能者が減少）","B. 住宅需要が増加し価格が上昇する","C. 影響はない","D. 賃貸市場が縮小する"],correct:"A",explanation:"住宅ローン金利の上昇は月々の返済額を増加させ、購入可能な人の数を減らします。これにより需要が落ちて住宅価格に下落圧力がかかります。"},
+  {id:27,category:"不動産市場（米）",q:"金利上昇時に、既存の住宅保有者が「住み替え」を控える行動（ロックイン効果）が生じる理由はどれですか？",choices:["A. 新築住宅の供給が急増するため","B. 賃貸住宅の需要が低下するため","C. 中古住宅の価格が急上昇するため","D. 住み替えると高金利で新たにローンを組み直す必要があるため"],correct:"D",explanation:"低金利時代に固定金利でローンを組んだ保有者は、住み替えると高金利で新たにローンを組み直す必要があります。これを嫌って売却を控える「ロックイン効果」が生じ、中古市場の供給が枯渇します。"},
+  {id:28,category:"不動産市場（米）",q:"商業用不動産は、金利上昇時にどのような影響を受けますか？",choices:["A. 賃料収入が増加するため価値が上がる","B. 住宅用不動産のみが影響を受ける","C. キャップレートの上昇により物件価値が下落しやすい（同一賃料でも高利回りで割り引かれる）","D. 影響を受けない"],correct:"C",explanation:"商業用不動産の価値評価に使われるキャップレート（還元利回り）は金利に連動して上昇します。同じ賃料収入でも高いキャップレートで割ると物件価値が下がります。"},
+  {id:29,category:"不動産市場（米）",q:"金利上昇により住宅ローン審査が厳しくなる場合、賃貸住宅市場への影響はどうなりますか？",choices:["A. 賃貸需要が低下する","B. 住宅購入を断念した層が賃貸に流れ、賃貸需要・家賃が上昇しやすい","C. 影響はない","D. 賃貸物件の供給が急増する"],correct:"B",explanation:"住宅ローンを組めない人が増えると、その層が賃貸市場に留まります。需要が供給を上回れば家賃が上昇します。金利上昇は「住宅購入者を賃借人に変える」効果があるため、皮肉にも賃貸市場を活性化させます。"},
+  {id:30,category:"不動産市場（米）",q:"不動産開発会社（デベロッパー）にとって金利上昇はどのような影響がありますか？",choices:["A. 建設コストが下がり利益が増える","B. 影響はない","C. 海外展開がしやすくなる","D. 建設融資コスト上昇と販売価格の下落圧力で二重の打撃を受ける"],correct:"D",explanation:"デベロッパーは建設資金を借入で調達するため金利上昇は直接コスト増となります。さらに完成後の販売時には買い手のローン金利も上昇しているため販売が困難になります。"},
+  {id:31,category:"企業財務（米）",q:"金利上昇局面で、特に業績への悪影響が大きいのはどのタイプの企業ですか？",choices:["A. 現金を多く持つ無借金企業","B. 輸出中心の製造業","C. 変動金利の借入を多く抱えるレバレッジ高企業（支払利息が直撃）","D. 配当を出さない企業"],correct:"C",explanation:"変動金利ローンを多く抱える企業は金利上昇がそのまま支払利息増加につながります。特にレバレッジが高い不動産会社・LBOで買収されたPE投資先企業などが大きな影響を受けます。"},
+  {id:32,category:"企業財務（米）",q:"金利上昇時に、企業のM&A（合併・買収）活動はどう変化しますか？",choices:["A. M&Aが活発になる","B. レバレッジドバイアウト（LBO）を中心にM&Aが減少しやすい（借入コスト急増）","C. 変化しない","D. 現金買収のみ増加する"],correct:"B",explanation:"LBOは買収資金の多くを借入で賄います。金利上昇は借入コストを増加させ、買収後の返済負担が重くなります。このためPEファンドなどによるLBO型M&Aが減少し、M&A市場全体が冷え込みます。"},
+  {id:33,category:"企業財務（米）",q:"金利上昇時に、現金・短期債券を大量に保有している企業にはどのような影響がありますか？",choices:["A. 現金の価値が下がるので損をする","B. M&Aが難しくなる","C. 影響はない","D. 利息収入が増加し、収益にプラスの影響がある（現金が稼ぐ力を持つ）"],correct:"D",explanation:"現金や短期国債を大量に保有する企業は、金利上昇により利息収入（インカムゲイン）が大幅に増加します。高金利時代には現金自体が収益を生みます。"},
+  {id:34,category:"企業財務（米）",q:"金利上昇時に、企業が設備投資（CAPEX）の判断をどのように変える傾向がありますか？",choices:["A. 設備投資が積極的になる","B. IT投資のみ増加する","C. 資本コストが上昇するため設備投資が抑制されやすい（投資の収益性が相対的に低下）","D. 変化しない"],correct:"C",explanation:"設備投資の判断には資本コスト（借入金利・株主要求利回り）との比較が重要です。金利上昇により資本コストが上がると、同じ投資案件でも収益性が相対的に低くなり、実行を見送るケースが増えます。"},
+  {id:35,category:"企業財務（米）",q:"2023年のシリコンバレーバンク（SVB）破綻の主因はどれですか？",choices:["A. 保有する長期国債の価格下落（含み損）が急速な金利上昇で顕在化し取り付けが起きた","B. 不正融資が発覚したため","C. 仮想通貨への投資が失敗したため","D. 不動産ローンのデフォルトが急増したため"],correct:"A",explanation:"SVBは低金利時代に集めた大量の預金を長期国債で運用していました。FRBの急速な利上げで長期国債価格が下落し大規模な含み損が発生。取り付け騒ぎが起きて資金が流出し破綻しました。"},
+  {id:36,category:"消費・景気（米）",q:"金利上昇が続いた場合、米国の個人消費にどのような影響が予想されますか？",choices:["A. 消費が増加する（預金利息が増えるため）","B. 影響はほとんどない","C. 高級品の消費のみ増加する","D. 借入コスト上昇と資産価格下落で消費が減少する（FRBが意図する需要破壊）"],correct:"D",explanation:"金利上昇はクレジットカード・自動車ローンのコスト増と住宅・株式の資産価値下落をもたらし消費を抑制します。FRBが利上げする主な目的の一つはこの消費抑制を通じたインフレ鎮静化です。"},
+  {id:37,category:"消費・景気（米）",q:"金利上昇時に、自動車販売台数はどうなる傾向がありますか？",choices:["A. 自動車ローン金利の上昇で月々の返済が増え、販売台数が減少しやすい","B. 自動車ローン金利が高くても需要は変わらない","C. 電気自動車のみ売れなくなる","D. 中古車のみ需要が増える"],correct:"A",explanation:"米国では自動車購入の約80〜85%がローンを利用します。金利上昇は月々の返済負担を直接増加させ、購入を断念・延期する消費者が増えるため販売台数が減少しやすくなります。"},
+  {id:38,category:"消費・景気（米）",q:"急速な利上げが続いた場合、労働市場（雇用）への影響はどうなりますか？",choices:["A. 雇用は増加し続ける","B. 公務員雇用のみ増加する","C. 雇用への影響はない","D. 企業の採用・投資抑制により失業率が上昇する可能性がある"],correct:"D",explanation:"金利上昇は企業の資金調達コストを上げ、投資・採用を抑制します。景気が冷え込むと企業はコスト削減のために人員削減を行うため、失業率が上昇します。"},
+  {id:39,category:"消費・景気（米）",q:"FRBが「ソフトランディング」を目指すとはどのような意味ですか？",choices:["A. インフレを即座に抑えるため利上げを急ぐ","B. インフレを抑えながら景気後退を回避する理想的な着地点を目指す","C. 金利を下げて景気を刺激する","D. 為替介入を行う"],correct:"B",explanation:"利上げが過激すぎると景気後退（ハードランディング）を引き起こします。FRBはインフレを抑制しつつ雇用・景気を維持するソフトランディングを理想とします。歴史的に達成は難しく、1990年代のグリーンスパン時代が稀な成功例とされます。"},
+  {id:40,category:"消費・景気（米）",q:"金利上昇がインフレを抑制するメカニズムとして正しいのはどれですか？",choices:["A. 需要を抑制し、モノ・サービスへの支出を減らすことでインフレ圧力が低下する","B. 金利を上げると物価が直接下がる","C. 輸出が増えるためインフレが下がる","D. 金利とインフレは無関係"],correct:"A",explanation:"中央銀行の利上げは「需要破壊」を通じてインフレを抑制します。借入コスト上昇と資産価格下落により消費・投資が減少し、需要が冷えることでモノ・サービスへの価格上昇圧力が低下します。"},
+  {id:41,category:"新興国・商品（米）",q:"米国の金利が急上昇した場合、新興国市場（エマージング市場）への影響として最も起こりやすいのは？",choices:["A. 新興国の金利は下がる","B. 新興国への資金流入が増える","C. 新興国から資金が流出し通貨安・株安が起こる（キャピタルフライト）","D. 新興国の輸出が増加する"],correct:"C",explanation:"米国金利上昇でドル資産の魅力が増し、新興国からキャピタルフライトが起きます。通貨下落・ドル建て債務負担増・株安の連鎖が生じ、過去にも新興国危機を引き起こした例があります。"},
+  {id:42,category:"新興国・商品（米）",q:"ドル高が進んだ場合、原油など国際商品（コモディティ）の価格はどうなる傾向がありますか？",choices:["A. 金価格のみ上昇する","B. 変化しない","C. コモディティ価格は上昇する","D. ドル建てコモディティは割高になり需要が減り価格が下落しやすい"],correct:"D",explanation:"原油などのコモディティはドル建てで取引されます。ドル高になると、ドル以外の通貨を使う国々にとって割高となり、需要が低下します。結果としてコモディティ価格に下落圧力がかかります。"},
+  {id:43,category:"新興国・商品（米）",q:"金（ゴールド）の価格は米国の金利が大幅に上昇した場合どうなる傾向がありますか？",choices:["A. 金価格は下落しやすい（機会費用の上昇で無利息の金の魅力が低下）","B. 金価格は株価に連動して上昇する","C. 変化しない","D. 金価格は上昇する（インフレヘッジのため）"],correct:"A",explanation:"金は利息を生まない資産です。金利上昇により債券・預金の利回りが高まると無利息の金を保有する機会費用が増加します。特に実質金利の上昇が金価格の下落と強く関係します。"},
+  {id:44,category:"新興国・商品（米）",q:"米国の利上げが欧州経済に与える影響として考えられるのはどれですか？",choices:["A. 欧州の金利が自動的に下がる","B. 欧州の輸出が急増する","C. 欧州は全く影響を受けない","D. ユーロ安によるインフレ輸入と、米国景気減速の影響が欧州にも及びやすい"],correct:"D",explanation:"米国利上げ→ドル高ユーロ安が進むと、欧州ではエネルギーなどドル建て輸入品が割高になりインフレが輸入されます。また米国景気の減速は欧州への輸出にも悪影響を与えます。"},
+  {id:45,category:"新興国・商品（米）",q:"国際貿易において、ドル高が進んだ場合、米国の貿易収支への影響はどれですか？",choices:["A. 輸入品の価格上昇で輸入が急減する","B. 貿易収支への影響はない","C. 輸出が増加し貿易黒字になる","D. 輸出競争力が低下し輸入が増えて貿易赤字が拡大しやすい"],correct:"D",explanation:"ドル高により米国輸出品が割高・輸入品が割安になります。輸出量の減少と輸入量の増加が重なり、貿易赤字が拡大しやすくなります。"},
+  {id:46,category:"金融機関（米）",q:"金利上昇時に、銀行（市中銀行）の短期的な収益（純利ざや）はどうなりますか？",choices:["A. 収益への影響はほとんどない","B. 短期的に純利ざやが拡大し収益が改善しやすい（貸出金利上昇が預金金利上昇に先行）","C. 純利ざやが縮小し収益が悪化する","D. 預金残高が増えて損失が出る"],correct:"B",explanation:"銀行は短期調達・長期貸出モデルで、金利上昇初期は貸出金利の上昇が先行し預金金利上昇が遅れるため、純利ざや（NIM）が拡大して収益改善になりやすいです。"},
+  {id:47,category:"金融機関（米）",q:"スタートアップ企業（未上場の成長企業）にとって金利上昇はどのような影響がありますか？",choices:["A. 資金調達が容易になる","B. 影響はない","C. ベンチャー投資が冷え込み、バリュエーション低下・資金調達難が生じる（冬の時代）","D. 大企業への売却（M&A）が増加する"],correct:"C",explanation:"金利上昇でVCの期待リターンが高まり、低収益のスタートアップへの投資が選別されます。また将来の利益を現在価値に割り引くとバリュエーションが低下。資金調達の「冬の時代」が到来します。"},
+  {id:48,category:"金融機関（米）",q:"生命保険会社の投資収益（主に債券運用）は、金利上昇時にどうなりますか？",choices:["A. 株式運用が改善する","B. 影響はない","C. 短期的には保有債券の含み損が増えるが、長期的には再投資利回りが改善する（長期保有前提のため）","D. 既存保有債券の価値下落で即座に大きな損失が確定する"],correct:"C",explanation:"生命保険会社は多額の長期債券を保有するため、金利上昇直後は含み損が増加します。しかし保険料収入を毎年再投資する際、高い利回りで運用できるようになるため、長期的には投資収益が改善します。"},
+  {id:49,category:"金融機関（米）",q:"金利上昇時に、企業の社債発行（資金調達）行動はどう変化しますか？",choices:["A. 社債発行が活発になる","B. 転換社債のみ増加する","C. 変化しない","D. 発行コストが上昇するため社債発行が減少しやすい（高コスト調達を敬遠）"],correct:"D",explanation:"社債発行時の利回り（コスト）は市場金利に連動して上昇します。資金調達コストが高くなることで企業は新規の社債発行を控えたり、既存の調達計画を見直したりします。"},
+  {id:50,category:"金融機関（米）",q:"金利上昇時に、ヘッジファンドの「キャリートレード」戦略はどのような状況に置かれますか？",choices:["A. キャリートレードが解消されると相場に影響が出ない","B. 高金利通貨から低金利通貨へのキャリートレードが一般的に有利になる","C. 金利差が縮小するためキャリートレードは常に有利になる","D. 円などの低金利通貨で調達しドルなどの高金利通貨に投資するキャリートレードが有利だが、相場急変時に急激な巻き戻しが起こるリスクがある"],correct:"D",explanation:"キャリートレードは金利差を利益にする戦略です。日米金利差拡大時に円安ドル高が進む一方、リスクオフ時には急激な円高への巻き戻しが発生し、多くの投資家が損失を被るリスクがあります。"},
+  {id:51,category:"株式市場（日）",q:"日本銀行（日銀）が政策金利を引き上げた場合、日本の株式市場全体への影響はどうなりますか？",choices:["A. 株価は上昇する（日銀が景気に自信を持った証拠）","B. 資金調達コスト上昇と円高進行で株価は下落しやすい","C. 株価への影響はない","D. 輸出株のみ上昇する"],correct:"B",explanation:"日銀の利上げは企業の借入コストを上げるとともに、円高進行（円安要因の消滅）を引き起こします。円高は輸出企業の収益を直撃するため、日本株全体に下落圧力がかかりやすくなります。"},
+  {id:52,category:"株式市場（日）",q:"日本の長期金利（10年国債利回り）が上昇した場合、高PBR（株価純資産倍率）の日本株への影響はどうなりますか？",choices:["A. 高PBR株はさらに買われる","B. 影響はない","C. 低PBR株のみ影響を受ける","D. 割引率の上昇により高PBR株のバリュエーションに下落圧力がかかる"],correct:"D",explanation:"高PBRの企業は将来の成長期待が株価に織り込まれており、割引率（金利）が上昇するとその現在価値が低下します。米国のグロース株同様、日本の高PBR株も金利上昇の影響を受けやすいです。"},
+  {id:53,category:"株式市場（日）",q:"日銀がYCC（イールドカーブ・コントロール）政策を修正・撤廃した場合、日本株市場への影響はどうなりますか？",choices:["A. 長期金利上昇と円高進行により特にバリュエーションが高い銘柄に売り圧力がかかる","B. 日本株は全面上昇する","C. 影響はほとんどない","D. 輸入企業の株価のみが上昇する"],correct:"A",explanation:"YCC修正・撤廃は日本の長期金利を押し上げ、同時に円高の要因になります。長期金利上昇は株式のバリュエーション（PER）を圧迫し、円高は輸出企業の収益を圧迫するため日本株全体に下落圧力がかかります。"},
+  {id:54,category:"株式市場（日）",q:"日銀が利上げを行い円高が進んだ場合、自動車・電機などの輸出企業の株価への影響はどうなりますか？",choices:["A. 輸出量が増えるので株価は上昇する","B. 円高により円換算の海外売上高・利益が減少し株価は下落しやすい","C. 影響はない","D. 輸出企業の株価は常に金利と無関係"],correct:"B",explanation:"日本の輸出企業は海外での売上をドルなどの外貨で得ており、円高が進むと円換算の売上・利益が減少します。自動車業界では「1円の円高で数百億円の利益が吹き飛ぶ」とも言われます。"},
+  {id:55,category:"株式市場（日）",q:"日本の金利上昇局面で、メガバンク（三菱UFJ・三井住友・みずほ）の株価への影響はどうなりますか？",choices:["A. 融資の焦げ付きが増えるので常に下落する","B. 貸出金利上昇で利ざやが改善する期待から上昇しやすい","C. 影響はない","D. 外国銀行株のみが上昇する"],correct:"B",explanation:"長年の超低金利で苦しめられてきたメガバンクは、金利上昇により貸出金利と預金金利の差（利ざや）が拡大し、収益改善が期待されます。このため金利上昇局面でメガバンク株は上昇しやすい傾向があります。"},
+  {id:56,category:"株式市場（日）",q:"日本の金利上昇時に、不動産業（デベロッパー・不動産賃貸）の株価への影響はどうなりますか？",choices:["A. 賃料収入が増えるため株価は上昇する","B. 金利と不動産株は無関係","C. 不動産株は下落しやすい（借入コスト増・物件評価額の低下）","D. 大手デベロッパーのみ上昇する"],correct:"C",explanation:"不動産業は多額の借入で物件を取得・保有します。金利上昇は①調達コストの増加②不動産キャップレートの上昇による物件評価額低下、を招き、不動産株への下落圧力になります。"},
+  {id:57,category:"株式市場（日）",q:"日銀が利上げを停止・利下げに転じた場合、日本株市場はどう反応しやすいですか？",choices:["A. 株価は下落を続ける","B. 影響はない","C. 株価は上昇しやすい（特に金利感応度の高い銘柄が恩恵）","D. 輸出株のみ上昇する"],correct:"C",explanation:"利下げ転換は割引率の低下・円安進行（輸出企業に有利）・企業の資金調達コスト低下を意味します。これらが複合的に働き、日本株全体が上昇しやすくなります。"},
+  {id:58,category:"株式市場（日）",q:"日本の金利正常化（長期にわたるゼロ金利から脱却）が進んだ場合、日本株市場全体への長期的影響はどれですか？",choices:["A. 日本株は長期的に下落し続ける","B. 影響は短期のみで長期は変わらない","C. 企業の稼ぐ力が問われ、低収益企業の淘汰が進む一方、収益力の高い企業は評価が高まる","D. 全ての業種が均等に下落する"],correct:"C",explanation:"ゼロ金利では低収益企業も低コストで借入ができ「ゾンビ企業」が温存されます。金利正常化はこうした企業の淘汰を促す一方、本当に稼ぐ力のある企業の競争力を高め、日本株の質的向上につながります。"},
+  {id:59,category:"株式市場（日）",q:"日本銀行が急速に利上げを行った場合に、日経平均株価への最も直接的な下押し圧力はどれですか？",choices:["A. 円高による輸出企業の業績悪化懸念","B. 日本の輸出量の減少","C. 外国人投資家の撤退","D. 国内消費の増加"],correct:"A",explanation:"日経平均は輸出企業（自動車・電機・精密機器）の比率が高く、円高が進むとこれらの企業の業績見通しが悪化します。日銀の利上げ→円高→輸出株安→日経平均安、という経路が最も直接的です。"},
+  {id:60,category:"株式市場（日）",q:"日本国内の金利が上昇した場合、高配当株の魅力はどう変化しますか？",choices:["A. 変化しない","B. 高配当株の配当利回りが自動的に上昇する","C. 高配当株の需要が増加し株価が上昇する","D. 国債利回りが高まることで高配当株の相対的な魅力が低下しやすい"],correct:"D",explanation:"日本の高配当株（配当利回り3〜4%台）は、国債がほぼゼロ金利だった時代には「実質的な代替投資」として人気がありました。金利上昇で国債利回りが高まると、高配当株を手放して国債に移る動きが出やすくなります。"},
+  {id:61,category:"債券市場（日）",q:"日銀がYCC（イールドカーブ・コントロール）で10年国債金利の上限を引き上げた場合、既存の日本国債の価格はどうなりますか？",choices:["A. 国債価格は上昇する","B. 国債価格は変わらない","C. 国債価格は下落する（新たに高利回りで発行される国債との比較で魅力が低下）","D. 外国国債のみ下落する"],correct:"C",explanation:"金利上限の引き上げは既存の低利回り国債の価格を下落させます。日銀はYCC運用のために大量の国債を購入してきましたが、金利上昇時には含み損が拡大するという課題を抱えています。"},
+  {id:62,category:"債券市場（日）",q:"日本の金融機関（銀行・生保）が大量に保有する日本国債は、金利上昇時にどのようなリスクを負いますか？",choices:["A. 保有国債の価値が上昇し利益が増える","B. 保有国債に多額の含み損が発生し財務健全性が低下するリスクがある","C. リスクは特にない","D. 外国国債のリスクのみが高まる"],correct:"B",explanation:"日本の銀行・生保は大量の日本国債を保有しています。金利が上昇すると保有国債の価格が下落し、含み損が拡大します。2022〜2023年の欧米の急速な利上げ期に、SVBのような問題が日本でも潜在的に懸念されました。"},
+  {id:63,category:"債券市場（日）",q:"日本がゼロ金利・マイナス金利から脱却する場合、国債市場で最初に起こりやすい動きはどれですか？",choices:["A. 国債の需要が急増し価格が上昇する","B. 日銀が国債を売却し市場に国債を放出する","C. 短期国債の利回りが先行して上昇し、イールドカーブが立ち直る","D. 長期国債のみ金利が低下する"],correct:"C",explanation:"中央銀行の政策金利変更は短期金利に直接作用します。日銀がゼロ金利政策を解除すると、まず短期の国債利回りが上昇し、市場の期待を通じて徐々に長期金利にも波及します。"},
+  {id:64,category:"債券市場（日）",q:"日本の財政赤字が膨らみ続けている中で金利が大幅に上昇した場合、国家財政にどのような影響がありますか？",choices:["A. 税収が増えるので財政は改善する","B. 国債の利払い費が急増し財政を圧迫するリスクがある","C. 影響はない","D. 国債発行残高が自動的に減少する"],correct:"B",explanation:"日本は1,000兆円超の国債残高を抱えています。金利が1%上昇すると将来の利払い費は年間数兆円単位で増加します。財政再建が進んでいない中での急速な金利上昇は、国家財政に深刻なストレスをもたらします。"},
+  {id:65,category:"債券市場（日）",q:"日銀が保有する大量の日本国債（保有残高はGDPを超える水準）に、金利上昇はどのような影響を与えますか？",choices:["A. 日銀の保有国債の評価益が増加する","B. 影響はない（日銀は満期まで保有するため）","C. 日銀の保有国債に多額の含み損が生じる（ただし中央銀行は特殊な会計処理がある）","D. 日銀は自動的に国債を売却する"],correct:"C",explanation:"金利上昇は日銀の保有国債の評価額を下落させ、理論上は巨大な含み損が生じます。ただし中央銀行は満期保有を前提にしており、また通貨発行権を持つため、民間金融機関とは異なる扱いがされますが、財務健全性の観点から議論が生じています。"},
+  {id:66,category:"債券市場（日）",q:"日本の個人投資家に人気の「個人向け国債（変動金利型10年）」は、金利上昇時にどうなりますか？",choices:["A. 価格が下落し損失が出る","B. 利率が下がる","C. 金利上昇に伴い利率が上がるため、個人投資家にとって有利になる","D. 発行が停止される"],correct:"C",explanation:"個人向け国債（変動10年）は半年ごとに利率が見直されます。市場金利（10年国債利回り）が上昇すると、それに連動して受取利息が増加します。元本保証付きで金利上昇の恩恵を受けられる、個人投資家向けの特徴ある商品です。"},
+  {id:67,category:"債券市場（日）",q:"日本の長期金利（10年国債利回り）が急上昇した場合、外国人投資家の行動はどうなりますか？",choices:["A. 外国人が日本国債を売却して海外市場に資金を移す可能性がある","B. 外国人は常に日本国債を買い続ける","C. 外国人投資家は関係しない","D. 外国人が大量に日本国債を購入し金利上昇が止まる"],correct:"A",explanation:"金利上昇局面では価格下落（含み損）リスクが高まるため、外国人投資家は利益確定や損切りのために日本国債を売却する場合があります。一方で、十分に利回りが高まれば購入が増える面もあります。"},
+  {id:68,category:"債券市場（日）",q:"日本企業の社債市場において、日銀の利上げは社債発行環境にどのような影響を与えますか？",choices:["A. 社債発行コストが下がり発行が活発になる","B. 影響はない","C. 国内社債のみ影響を受ける","D. 社債発行コストが上昇し、特に低格付け企業では資金調達が困難になる"],correct:"D",explanation:"日銀の利上げはベースとなる国債金利を押し上げ、それに上乗せする形で決まる社債の発行コストも上昇します。特に格付けが低い企業は信用スプレッドが拡大し、資金調達が困難・割高になります。"},
+  {id:69,category:"為替・円",q:"日銀が予想外の利上げを発表した場合、円相場はどう動きますか？",choices:["A. 円安が進む","B. 円相場は変動しない","C. ドル高が進む","D. 円高が急速に進みやすい（日本の利回り上昇でドル売り・円買いが増える）"],correct:"D",explanation:"日銀の利上げはサプライズになるほど、円の利回り上昇を見込んだドル売り・円買いが一気に進みます。2024年の日銀の利上げ時にも、市場は急速な円高で反応しました。"},
+  {id:70,category:"為替・円",q:"円高が急速に進んだ場合、インバウンド（訪日外国人）観光業への影響はどうなりますか？",choices:["A. 訪日客が増えインバウンド消費が活発になる","B. インバウンドは為替と無関係","C. 円高になると外国人にとって日本が割高になりインバウンド需要が減少しやすい","D. 日本人の海外旅行が減る"],correct:"C",explanation:"円安が進んでいた時期、外国人にとって日本は「割安な旅行先」として人気が高まりました。逆に円高が進むと外国人にとって日本の物価が相対的に高くなり、訪日観光客数や消費額が減少しやすくなります。"},
+  {id:71,category:"為替・円",q:"日本が利上げを行い円高が進んだ場合、日本からの海外投資（対外直接投資・証券投資）はどうなりますか？",choices:["A. 円高になるほど海外投資が有利になる","B. 海外投資の円換算リターンが低下し、海外投資を控える動きが出る可能性がある","C. 影響はない","D. 海外投資は必ず増加する"],correct:"B",explanation:"円高が進むと、ドルなどで投資した資産を円に換えたときのリターンが目減りします。「円安で含み益があった海外投資が、円高で含み損に転じる」という現象が起きやすく、海外投資の魅力が相対的に低下します。"},
+  {id:72,category:"為替・円",q:"円安進行時に、日本の消費者物価（CPI）はどのような影響を受けますか？",choices:["A. 輸入品の円換算価格が上昇しインフレ圧力が高まる","B. 円安はCPIと無関係","C. 国内物価は下落する","D. 輸出品の価格が下落する"],correct:"A",explanation:"日本はエネルギー・食料の多くを輸入に依存しています。円安が進むとこれらのドル建て輸入品の円換算価格が上昇し、ガソリン・電気料金・食料品などの価格を押し上げます。2022〜2023年の円安局面では輸入インフレが顕著でした。"},
+  {id:73,category:"為替・円",q:"日本が利上げを行う一方、米国が利下げを行う局面では、ドル円レートはどうなりますか？",choices:["A. 影響はない","B. ドル高円安がさらに進む","C. 日米金利差が縮小することで円高方向に動きやすい","D. 人民元が上昇する"],correct:"C",explanation:"日本の利上げ＋米国の利下げは日米金利差を縮小させます。金利差縮小はドルの相対的な利回り優位を低下させ、円買いドル売りが進みやすくなります。この局面では大幅な円高が進みやすいです。"},
+  {id:74,category:"為替・円",q:"「実質実効為替レート」でみた円の価値が歴史的な低水準にある場合、何を意味しますか？",choices:["A. 日本の輸出競争力が低下している","B. インフレ調整後の円の購買力が大幅に低下しており日本の対外的な購買力が弱い状態を示す","C. 日本経済が強いことを示す","D. 日本の株式市場が過大評価されている"],correct:"B",explanation:"実質実効為替レートはインフレ調整後の円の価値を複数通貨に対して示します。この指標が低水準にあることは、物価変動を考慮すると円の購買力が大幅に低下していることを意味し、日本の対外購買力の弱さを示します。"},
+  {id:75,category:"為替・円",q:"日本のキャリートレード（円で借りてドルなどで運用）が急速に解消される場合、円相場はどうなりますか？",choices:["A. 円安がさらに進む","B. 円相場は変動しない","C. ドルが上昇する","D. 円の買い戻しが発生し急速な円高が進む（キャリー巻き戻し）"],correct:"D",explanation:"キャリートレードは円を売って外貨（主にドル）を買う取引です。リスクオフ時や日銀利上げ時にこの取引が急速に解消されると、円の買い戻し（外貨売り・円買い）が一斉に起こり、急激な円高が発生します。2024年のキャリー巻き戻しがその典型例です。"},
+  {id:76,category:"不動産市場（日）",q:"日銀が利上げを行った場合、日本の住宅ローン（変動金利型）を抱える家計への影響はどうなりますか？",choices:["A. 返済額は変わらない","B. 日本の住宅ローンは固定なので影響はない","C. 月々の返済額が増加し家計を圧迫するリスクがある","D. 返済額が減少する"],correct:"C",explanation:"日本の住宅ローンは約7割が変動金利型です。日銀が政策金利を引き上げると、変動金利ローンの基準金利（短期プライムレート）も引き上げられ、月々の返済額が増加します。多くの家計が影響を受けます。"},
+  {id:77,category:"不動産市場（日）",q:"日本の金利上昇時に、東京都心のオフィス・マンション価格はどうなりますか？",choices:["A. 価格は上昇し続ける（需要が強いため）","B. 影響はない","C. 都心物件のみ金利の影響を受けない","D. 期待利回り（キャップレート）の上昇により物件価格に下落圧力がかかる"],correct:"D",explanation:"不動産の価格は期待利回り（キャップレート）で評価されます。金利が上昇するとキャップレートも上昇し、同じ賃料収入でも物件評価額が下がります。超低金利が支えてきた都心不動産の高い価格水準が調整される可能性があります。"},
+  {id:78,category:"不動産市場（日）",q:"日本のJ-REIT（上場不動産投資信託）への影響として、金利上昇時に最も起こりやすいのはどれですか？",choices:["A. J-REITの分配金利回りが相対的に低下し、投資家が売却してJ-REIT価格が下落する","B. J-REITは金利上昇の恩恵を受け上昇する","C. J-REITの価格は変わらない","D. 外国人投資家のみJ-REITを購入する"],correct:"A",explanation:"J-REITは安定した分配金収入が魅力ですが、国債利回りが上昇すると、より安全な国債でも同程度の利回りが得られるようになります。これによりJ-REITの相対的な魅力が低下し、投資家の売却でJ-REIT価格が下落します。"},
+  {id:79,category:"不動産市場（日）",q:"日本の金利上昇時に、不動産デベロッパーの資金調達はどう変化しますか？",choices:["A. 資金調達コストが低下し開発が活発になる","B. 影響はない","C. 社債・銀行融資のコストが上昇し、開発プロジェクトの採算性が悪化する","D. 外国人デベロッパーのみが影響を受ける"],correct:"C",explanation:"不動産デベロッパーは多額の借入でプロジェクトを進めます。金利上昇は調達コストの増加をもたらし、プロジェクトの収益性が低下します。また販売時のエンドユーザーのローン金利も上昇しているため、二重の打撃を受けます。"},
+  {id:80,category:"不動産市場（日）",q:"金利上昇時に、日本で「固定金利（全期間固定）」でローンを組んでいる住宅保有者への影響はどうなりますか？",choices:["A. 返済額は変わらず直接的な影響はない（ただし保有不動産の評価額下落リスクはある）","B. 返済額が増加する","C. 繰り上げ返済が必須となる","D. ローンが全額免除される"],correct:"A",explanation:"全期間固定金利でローンを組んでいる保有者は、市場金利が変動しても返済額は変わりません。ただし周辺の不動産価格が下落したり、将来の売却価格に影響が出たりするリスクはあります。"},
+  {id:81,category:"企業財務（日）",q:"日本の金利上昇時に、負債比率（有利子負債/自己資本）の高い日本企業への影響はどうなりますか？",choices:["A. 影響はない","B. 借入コストが上昇し収益を圧迫するリスクがある","C. 負債比率が高い企業ほど有利になる","D. 自己資本が増加する"],correct:"B",explanation:"有利子負債が多い企業は、金利上昇により支払利息が増加し営業利益を圧迫します。特に変動金利での借入が多い企業、建設・不動産・小売業など固定費比率が高い業種で影響が顕著になります。"},
+  {id:82,category:"企業財務（日）",q:"日本企業の「内部留保」（利益余剰金）が積み上がっている状況で金利が上昇した場合、企業行動はどう変化しますか？",choices:["A. 内部留保はすべて配当として支払われる","B. 内部留保を活用した設備投資・M&Aが増加する可能性がある（預金利息では不十分となるため）","C. 変化しない","D. 内部留保が政府に没収される"],correct:"B",explanation:"超低金利時代は内部留保を現金で抱えていても利息はほぼゼロでした。金利が上昇すると現金保有のコスト（機会費用）が高まり、より積極的に設備投資やM&Aに資金を振り向けるインセンティブが生まれます。"},
+  {id:83,category:"企業財務（日）",q:"日本銀行が利上げを行った場合、中小企業（特に変動金利で銀行融資を受けている企業）への影響はどうなりますか？",choices:["A. 中小企業は特に影響を受けない","B. 借入金利の上昇で資金繰りが悪化し、倒産リスクが高まる可能性がある","C. 融資額が自動的に増加する","D. 中小企業は固定金利のみなので影響はない"],correct:"B",explanation:"日本の中小企業の多くは変動金利で銀行から融資を受けています。日銀の利上げは短期プライムレートを引き上げ、中小企業の借入金利を直接上昇させます。財務基盤が弱い中小企業では資金繰りの悪化・倒産増加につながるリスクがあります。"},
+  {id:84,category:"企業財務（日）",q:"日本企業がM&A（海外企業の買収）を行う際に、円高が進んで��る状況はどのような影響を与えますか？",choices:["A. 円高時に海外買収を行うと割高になる","B. 円高になると円の購買力が高まり、相対的に安価に海外企業を買収できる","C. 影響はない","D. 円高時は海外買収が禁止される"],correct:"B",explanation:"円高の局面では、日本企業が円をドルなどに換えて海外企業を買収する際、円の購買力が高いためより少ない円で済みます。これが「円高を活用した海外M&Aの好機」とされる理由です。逆に円安時は割高になります。"},
+  {id:85,category:"企業財務（日）",q:"日本の上場企業が「自社株買い」を実施する動機として、金利上昇局面でどのような変化がありますか？",choices:["A. 金利が上がると自社株買いを増やす動機が高まる","B. 金利上昇で資金調達コストが増加するため、借入を利用した自社株買いは抑制されやすい","C. 自社株買いは金利に無関係","D. 金利上昇時には自社株買いが法的に禁止される"],correct:"B",explanation:"ゼロ金利時代は低コストで借入した資金で自社株買いを行う企業もありました。金利上昇により借入コストが増加すると、財務的に余裕のある企業のみが自社株買いを継続でき、借入を利用した自社株買いは採算が悪化します。"},
+  {id:86,category:"消費・景気（日）",q:"日銀が利上げを行った場合、日本の個人消費にどのような影響が予想されますか？",choices:["A. 消費が大幅に増加する（預金利息が増えるため）","B. 貯蓄率が高い日本では消費への影響は限定的だが、住宅ローン返済者の消費抑制が起きる","C. 影響はない","D. 高額品の消費のみ増加する"],correct:"B",explanation:"日本の家計は貯蓄率が比較的高く、米国ほどには消費が借入に依存していませんが、変動金利住宅ローン保有者（約1,000万世帯以上）の返済負担増加は消費を抑制します。また利息収入増加による消費押し上げ効果もある程度期待されます。"},
+  {id:87,category:"消費・景気（日）",q:"日本の金利上昇により円高が進んだ場合、輸入物価と消費者物価（CPI）はどうなりますか？",choices:["A. 輸入物価が上昇しインフレが加速する","B. 円高により輸入物価が低下し、インフレ圧力が和らぐ","C. CPIは変化しない","D. 国内品の価格が上昇する"],correct:"B",explanation:"円高が進むと、輸入品のドル建て価格が同じでも円換算では安くなります。エネルギー・食料品を中心に輸入物価が低下し、国内の消費者物価（CPI）の上昇圧力が和らぎます。円高はインフレ抑制に働きます。"},
+  {id:88,category:"消費・景気（日）",q:"日本で金利が上昇した場合、企業の設備投資はどうなりますか？",choices:["A. 設備投資が大幅に増加する","B. 資金調達コスト上昇と景気先行き不透明感で設備投資が抑制される可能性がある","C. 変化しない","D. 海外への設備投資のみ増加する"],correct:"B",explanation:"金利上昇は①借入コストの増加②将来の売上見通しの悪化懸念から、企業の設備投資マインドを冷やします。特に中小企業は財務余力が少ないため、設備投資の抑制が顕著になります。"},
+  {id:89,category:"消費・景気（日）",q:"日本銀行が金利を引き上げる最大の動機として正しいのはどれですか？",choices:["A. 政府の指示に従うため","B. 円安を止めるため（為替目的の利上げ）","C. 持続的な賃金上昇を伴うインフレが定着し、物価安定目標（2%）が安定的に達成できる見通しになったとき","D. 米国が利上げしたのに合わせるため"],correct:"C",explanation:"日銀の物価安定目標は「持続的・安定的な2%のインフレ」です。過去の利上げ失敗の反省から、日銀は「賃金上昇→物価上昇」の好循環が確認されてから利上げする方針です。単なる円安対策や米国追随では利上げを行いません。"},
+  {id:90,category:"消費・景気（日）",q:"日本でスタグフレーション（不況とインフレの同時発生）が起きた場合、日銀の金融政策はどのような難しさに直面しますか？",choices:["A. 利上げと利下げを同時に実施できるので問題ない","B. インフレ対策の利上げが景気をさらに悪化させ、景気対策の利下げがインフレをさらに悪化させるジレンマに陥る","C. 政府が財政政策で対応するので日銀は何もしなくてよい","D. 為替介入のみで対応できる"],correct:"B",explanation:"スタグフレーションでは「インフレを抑えるための利上げ」と「景気を支えるための利下げ」という相矛盾する政策が同時に必要になります。どちらを優先しても問題を悪化させるリスクがあり、中央銀行は難しいジレンマに直面します。"},
+  {id:91,category:"金融機関（日）",q:"日本のメガバンクが大量の日本国債を保有している場合、急速な金利上昇はどのような問題を引き起こしますか？",choices:["A. 国債の利子収入が増えるので収益が改善する","B. 保有国債の含み損が拡大し、金融システム全体の安定性に影響が出る可能性がある","C. 問題は生じない","D. 国債を即座に売却して損失を避けられる"],correct:"B",explanation:"銀行は大量の日本国債を保有しています。急速な金利上昇は保有国債の価格を下落させ、含み損を急拡大させます。銀行が一斉に国債を売却すれば金利がさらに上昇するという悪循環（国債の暴落リスク）の懸念があります。"},
+  {id:92,category:"金融機関（日）",q:"日本の保険会社（生保・損保）にとって、長期金利の上昇はどのような影響がありますか？",choices:["A. 既存保有債券の評価損が生じる一方、運用利回りの改善という長期的なメリットもある","B. 常にマイナスの影響のみ","C. 影響はない","D. 保険料が自動的に下がる"],correct:"A",explanation:"保険会社は長期の保険契約に対応するため超長期債券を大量に保有しています。金利上昇は既存保有債券の評価損をもたらしますが、一方で新規の保険料収入を高い利回りで運用できるため、長期的には逆ざや問題が解消する方向に働きます。"},
+  {id:93,category:"金融機関（日）",q:"日本の地方銀行にとって、金利上昇はどのような影響がありますか？",choices:["A. 地方銀行はすべて恩恵を受ける","B. 地方銀行に影響はない","C. 利ざや改善の一方、保有国債の含み損拡大と融資先企業の倒産増加という二面のリスクがある","D. 地方銀行は利上げで必ず破綻する"],correct:"C",explanation:"地方銀行は大量の国債を保有しており金利上昇で含み損が生じます。一方で貸出金利上昇による利ざや改善の恩恵もあります。また地方経済の疲弊した融資先（中小企業）が金利上昇で資金繰り悪化・倒産増加するリスクも抱えています。"},
+  {id:94,category:"金融機関（日）",q:"日本の年金基金（GPIFなど）の運用において、金利上昇はどのような影響がありますか？",choices:["A. 債券運用の評価損が生じる一方、将来の新規投資では高い利回りで運用できる","B. 年金基金には影響はない","C. 年金給付額が自動的に増加する","D. 株式の運用利益が増加する"],correct:"A",explanation:"年金基金は多額の国内債券を保有しており、金利上昇で評価損が生じます。ただし新たに購入する債券は高い利回りで運用できるため、長期的な運用利回りは改善します。GPIFは超長期の運用機関なので、一時的な評価損より長期の利回り改善を重視します。"},
+  {id:95,category:"金融機関（日）",q:"日本の証券会社にとって、金利上昇局面の影響はどうなりますか？",choices:["A. 債券の売買手数料収入が増え常に有利","B. 株式市場の冷え込みと債券価格下落により、株式・債券双方で収益機会が減少する可能性がある","C. 証券会社は金利と無関係","D. 証券会社は常に金利上昇で恩恵を受ける"],correct:"B",explanation:"証券会社は株式売買の手数料や債券引受での収益を得ています。金利上昇で株式市場が冷え込むと株式売買が減少し、新規株式公開（IPO）も低迷します。また債券価格下落で既存保有債券に損失が生じる可能性もあります。"},
+  {id:96,category:"マクロ経済（日）",q:"日本が「デフレ脱却」に成功し、持続的なインフレが定着した場合、個人の資産選択行動はどう変わりますか？",choices:["A. 現金・預金での保有が有利になる","B. 物価の上昇で現金の実質価値が目減りするため、インフレに強い資産（株式・不動産・インフレ連動債など）への移行が促される","C. 変化しない","D. 日本国債のみが魅力を増す"],correct:"B",explanation:"インフレが定着すると現金・預金は実質的な購買力が目減りします。これにより株式・不動産・コモディティなどのリアルアセット（インフレに強い資産）への資金シフトが促されます。「眠っていた日本の個人金融資産が動く」とも言われます。"},
+  {id:97,category:"マクロ経済（日）",q:"日本の財政悪化と金利上昇が同時に進んだ場合、国債の信用リスク（財政懸念）はどうなりますか？",choices:["A. 財政リスクは常に無関係","B. 日本は国内消化率が高いので問題ない","C. 金利上昇→利払い費増加→財政悪化→金利さらに上昇という悪循環（ドーマー条件の悪化）が懸念される","D. 財政悪化は株式市場のみに影響する"],correct:"C",explanation:"ドーマー条件とは「名目GDP成長率＞国債金利」が維持できなくなると財政が持続不可能になるという理論です。日本では金利上昇が利払い費を増加させ、財政悪化を招き、さらに金利上昇圧力がかかるという悪循環（財政ドミナンス）のリスクが議論されています。"},
+  {id:98,category:"マクロ経済（日）",q:"日本で「賃金と物価の好循環」が実現し日銀が利上げを続けた場合、経済全体への長期的な影響はどうなりますか？",choices:["A. 経済は必ず悪化する","B. 賃金上昇→消費増加→企業収益増加→賃上げの好循環が回れば、持続的な経済成長につながる可能性がある","C. 影響はない","D. デフレが再来する"],correct:"B",explanation:"日本はデフレ・低成長が長期化した「失われた30年」を経験しました。賃金上昇を伴うインフレが定着し、日銀が金利を正常化できれば、消費・投資・賃金の好循環が回り始め、持続的な経済成長につながる可能性があります。"},
+  {id:99,category:"マクロ経済（日）",q:"日本の金利上昇が「ゾンビ企業」（収益では利払いもできない低収益企業）に与える影響はどれですか？",choices:["A. ゾンビ企業は金利に影響を受けない","B. ゾンビ企業が救済される","C. ゾンビ企業の倒産が増加し、短期的には痛みが伴うが長期的には経済の新陳代謝が促される","D. 政府がすべてのゾンビ企業を救済する"],correct:"C",explanation:"超低金利が長年続いたことで、本来は市場から退出すべき低収益企業が生き延びてきました（ゾンビ企業問題）。金利上昇はこれらの企業の資金繰りを悪化させ倒産を増加させますが、長期的には経済の新陳代謝を促し、生産性向上につながります。"},
+  {id:100,category:"マクロ経済（日）",q:"日本銀行が「財政ファイナンス（財政の穴埋めのために国債を引き受けること）」を行っているとみなされた場合、市場はどう反応しますか？",choices:["A. 市場は好意的に受け取る","B. 日銀への信頼が高まる","C. 影響はない","D. 通貨（円）の信認が低下し、急激な円安・インフレ・金利上昇が引き起こされるリスクがある"],correct:"D",explanation:"財政ファイナンスは政府の財政赤字を中央銀行が直接支援することで、歴史的にハイパーインフレの原因となってきました。市場がこれを認識すると通貨への信頼が失われ、急激な円安・インフレ・長期金利の急騰（国債売り）が連鎖するリスクがあります。"}
+];
+
+let sessionQuestions=[], currentIdx=0, sessionResults=[], selectedChoice=null;
+
+function startSession(){
+  const shuffled=[...ALL_QUESTIONS].sort(()=>Math.random()-0.5);
+  sessionQuestions=shuffled.slice(0,10); currentIdx=0; sessionResults=[]; showQuestion();
+}
+function showQuestion(){
+  const q=sessionQuestions[currentIdx], num=currentIdx+1, total=sessionQuestions.length;
+  document.getElementById('q-counter').textContent=`${num} / ${total}`;
+  document.getElementById('progress-bar').style.width=`${(num/total)*100}%`;
+  document.getElementById('progress-text').textContent=`問題 ${num} / ${total}`;
+  document.getElementById('q-category').textContent=q.category;
+  document.getElementById('q-text').textContent=q.q;
+  document.getElementById('reason-input').value='';
+  document.getElementById('btn-submit').disabled=false;
+  selectedChoice=null;
+  const c=document.getElementById('choices-container'); c.innerHTML='';
+  ['A','B','C','D'].forEach((label,i)=>{
+    const el=document.createElement('label'); el.className='choice-label';
+    el.innerHTML=`<input type="radio" name="choice" value="${label}" onchange="selectedChoice='${label}'"><span class="choice-badge">${label}</span><span class="choice-text">${q.choices[i].replace(/^[ABCD]\.\s*/,'')}</span>`;
+    c.appendChild(el);
+  });
+  showScreen('screen-question');
+}
+function skipQuestion(){
+  sessionResults.push({q:sessionQuestions[currentIdx],selectedChoice:null,isCorrect:false,choiceScore:0,reasonScore:0,totalScore:0,skipped:true});
+  currentIdx++;
+  currentIdx<sessionQuestions.length ? showQuestion() : showResult();
+}
+async function submitAnswer(){
+  if(!selectedChoice){alert('選択肢を選んでください');return;}
+  const q=sessionQuestions[currentIdx], reason=document.getElementById('reason-input').value.trim();
+  const isCorrect=selectedChoice===q.correct, choiceScore=isCorrect?1:0;
+  document.getElementById('btn-submit').disabled=true;
+  document.getElementById('fb-counter').textContent=`${currentIdx+1} / ${sessionQuestions.length}`;
+  const card=document.getElementById('feedback-card');
+  card.className='feedback-card '+(isCorrect?'partial':'wrong');
+  document.getElementById('feedback-badge').textContent='採点中...';
+  document.getElementById('feedback-score').innerHTML=`? <span>/ 2点</span>`;
+  document.getElementById('feedback-correct').innerHTML=`正解: <strong>${q.correct}. ${q.choices.find(c=>c.startsWith(q.correct+'.')).replace(/^[ABCD]\.\s*/,'')}</strong>`;
+  document.getElementById('explanation-text').textContent=q.explanation;
+  document.getElementById('ai-loading').style.display=reason?'flex':'none';
+  document.getElementById('ai-result').style.display='none';
+  document.getElementById('btn-next').textContent=currentIdx<sessionQuestions.length-1?'次の問題へ':'結果を見る';
+  showScreen('screen-feedback');
+  let reasonScore=0, aiComment=reason?'':'理由が記述されていないため0点です。';
+  if(reason){
+    try{
+      const res=await fetch('/api/score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q.q,correctChoice:q.correct,selectedChoice,isCorrect,reason})});
+      const data=await res.json();
+      if(res.ok){reasonScore=data.score||0;aiComment=data.comment||'';}
+      else{aiComment=`採点エラー: ${data.error||'不明なエラー'}`;}
+    }catch{aiComment='サーバーへの接続に失敗しました。';}
+  }
+  const totalScore=choiceScore+reasonScore;
+  let cls,label;
+  if(totalScore===2){cls='perfect';label='✨ 完璧！';}
+  else if(totalScore===1){cls='partial';label='🔶 部分正解';}
+  else{cls='wrong';label='❌ 不正解';}
+  card.className=`feedback-card ${cls}`;
+  document.getElementById('feedback-badge').textContent=label;
+  document.getElementById('feedback-score').innerHTML=`${totalScore} <span>/ 2点</span>`;
+  document.getElementById('ai-loading').style.display='none';
+  document.getElementById('ai-result').style.display='block';
+  document.getElementById('ai-comment-text').textContent=aiComment;
+  sessionResults.push({q,selectedChoice,isCorrect,choiceScore,reasonScore,totalScore,skipped:false});
+}
+function nextQuestion(){currentIdx++;currentIdx<sessionQuestions.length?showQuestion():showResult();}
+function showResult(){
+  const total=sessionResults.reduce((s,r)=>s+r.totalScore,0);
+  const p2=sessionResults.filter(r=>r.totalScore===2).length;
+  const p1=sessionResults.filter(r=>r.totalScore===1).length;
+  const p0=sessionResults.filter(r=>r.totalScore===0&&!r.skipped).length;
+  const sk=sessionResults.filter(r=>r.skipped).length;
+  document.getElementById('result-total').textContent=total;
+  document.getElementById('result-p2').textContent=p2;
+  document.getElementById('result-p1').textContent=p1;
+  document.getElementById('result-p0').textContent=p0;
+  const grid=document.getElementById('result-grid');
+  const old=document.getElementById('skip-stat'); if(old)old.remove();
+  if(sk>0){const d=document.createElement('div');d.id='skip-stat';d.className='result-stat';d.innerHTML=`<div class="val gray">${sk}</div><div class="lbl">スキップ</div>`;grid.appendChild(d);}
+  let grade;
+  if(total>=18)grade='🏆 金利マスター！';
+  else if(total>=14)grade='🥇 優秀';
+  else if(total>=10)grade='📈 合格ライン';
+  else if(total>=6)grade='📚 もう少し！';
+  else grade='🔰 これから頑張ろう';
+  document.getElementById('result-grade').textContent=grade;
+  const container=document.getElementById('question-results'); container.innerHTML='';
+  sessionResults.forEach((r,i)=>{
+    const div=document.createElement('div'); div.className='qr-item';
+    const dot=r.skipped?'skip':`p${r.totalScore}`;
+    const info=r.skipped?'<span style="font-size:12px;color:#94a3b8;">スキップ</span>':`<span style="font-size:12px;color:#64748b;">あなた: ${r.selectedChoice} / 正解: ${r.q.correct}</span>`;
+    const sc=r.skipped?'−':`${r.totalScore}点`;
+    const qt=r.q.q.length>38?r.q.q.slice(0,38)+'…':r.q.q;
+    div.innerHTML=`<div class="qr-dot ${dot}"></div><div class="qr-text"><strong>Q${i+1}.</strong> ${qt}<br>${info}</div><div class="qr-score">${sc}</div>`;
+    container.appendChild(div);
+  });
+  showScreen('screen-result');
+}
+function getShareText(){
+  const total=sessionResults.reduce((s,r)=>s+r.totalScore,0);
+  const p2=sessionResults.filter(r=>r.totalScore===2).length;
+  const sk=sessionResults.filter(r=>r.skipped).length;
+  return `💹 金利ドリル\nスコア: ${total}/20点\n完璧: ${p2}問${sk>0?` | スキップ: ${sk}問`:''}\n#金利ドリル #金融学習`;
+}
+function shareTwitter(){window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(getShareText())}`,'_blank');}
+function copyResult(){navigator.clipboard.writeText(getShareText()).then(()=>alert('コピーしました！')).catch(()=>alert('コピー失敗'));}
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
+</script>
+</body>
+</html>

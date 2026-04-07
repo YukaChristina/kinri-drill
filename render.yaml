@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: kinri-drill
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false   # Render ダッシュボードで手動設定
+      - key: NODE_ENV
+        value: production

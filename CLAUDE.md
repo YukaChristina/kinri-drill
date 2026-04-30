@@ -9,13 +9,16 @@
 - **バックエンド**: Node.js + Express（`server.js`）
 - **AI採点**: OpenAI GPT-4o-mini（`/api/score` エンドポイント）
 - **デプロイ**: Render.com（`render.yaml` で設定済み）
+- **本番URL**: https://kinri-drill.yuka-studio.net
 
 ## ファイル構成
 ```
 kinri-drill/
 ├── server.js          # Expressサーバー（APIエンドポイント・セキュリティ設定）
 ├── public/
-│   └── index.html     # フロントエンド全体（問題データ含む）
+│   ├── index.html     # フロントエンド全体（問題データ含む）
+│   ├── manifest.json  # PWAマニフェスト
+│   └── icons/icon.svg # ホーム画面アイコン
 ├── package.json
 ├── render.yaml        # Renderデプロイ設定
 ├── .env               # APIキー（Gitに含めない）

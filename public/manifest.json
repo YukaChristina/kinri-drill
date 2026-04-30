@@ -1,0 +1,18 @@
+{
+  "name": "金利ドリル",
+  "short_name": "金利ドリル",
+  "description": "金利の変動が経済・市場・資産に与える影響を学ぶドリルアプリ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f0f4f8",
+  "theme_color": "#1a56db",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
